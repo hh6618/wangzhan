@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的简单网站</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <h1>欢迎来到我的网站！</h1>
@@ -26,6 +27,12 @@
         </div>
     </div>
 
+    <script>
+        const supabase = Supabase.createClient(
+            'https://ucztckxladpgbzjvcwck.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjenRja3hsYWRwZ2J6anZjd2NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5MTkxNTcsImV4cCI6MjA2ODQ5NTE1N30.kLa03Hgd33_roU_B3-wSVKwjeaJLxwddu4_v_Y05RBw'
+        );
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
