@@ -17,10 +17,29 @@ document.addEventListener('DOMContentLoaded', () => {
         postElement.classList.add('post-item');
         postElement.innerHTML = `
             <h3>${post.title}</h3>
-            <p>${post.content}</p>
+            <div class="post-content">${post.content}</div>
             <small>发布于: ${new Date(post.timestamp).toLocaleString()}</small>
+            <button class="toggle-content">展开/收起</button>
         `;
         postsContainer.prepend(postElement); // 新文章显示在最上面
+
+        // 添加点击事件监听器
+        const toggleButton = postElement.querySelector('.toggle-content');
+        const postContentDiv = postElement.querySelector('.post-content'); // 假设内容在一个 div 中
+        if (postContentDiv) {
+            postContentDiv.style.display = 'none'; // 默认隐藏
+            toggleButton.textContent = '展开';
+            toggleButton.addEventListener('click', () => {
+                if (postContentDiv.style.display === 'none') {
+                    postContentDiv.style.display = 'block';
+                    toggleButton.textContent = '收起';
+                } else {
+                    postContentDiv.style.display = 'none';
+                    toggleButton.textContent = '展开';
+                }
+            });
+        }
+
 
         if (save) {
             const posts = JSON.parse(localStorage.getItem('posts')) || [];

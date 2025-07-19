@@ -83,3 +83,28 @@ body {
     margin-top: 10px;
     font-size: 0.9em;
 }
+
+.post-item .toggle-content {
+    background-color: #6c757d;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+    margin-top: 10px;
+    float: right;
+}
+
+.post-item .toggle-content:hover {
+    background-color: #5a6268;
+}
+
+.post-item .post-content {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    background-color: #fefefe;
+}
