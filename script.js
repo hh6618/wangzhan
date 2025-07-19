@@ -5,14 +5,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const postsContainer = document.getElementById('postsContainer');
 
     // 从 localStorage 加载文章
-    function loadPosts() {
-        const posts = JSON.parse(localStorage.getItem('posts')) || [];
-        postsContainer.innerHTML = ''; // 清空现有内容
-        posts.forEach(post => addPostToDOM(post, false)); // 不保存，因为是从存储中加载
+    const API_BASE_URL = 'http://localhost:3000';
+
+    async function loadPosts() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/posts`);
+            const posts = await response.json();
+            postsContainer.innerHTML = ''; // 清空现有内容
+            posts.forEach(post => addPostToDOM(post));
+        } catch (error) {
+            console.error('Error loading posts:', error);
+            alert('加载文章失败，请检查服务器是否运行。');
+        }
     }
 
     // 将文章添加到 DOM
-    function addPostToDOM(post, save = true) {
+    async function addPostToDOM(post) {
         const postElement = document.createElement('div');
         postElement.classList.add('post-item');
         postElement.innerHTML = `
@@ -56,15 +64,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const commentTextInput = postElement.querySelector('.comment-text');
 
         // 加载评论
-        function loadComments(postId) {
-            const allComments = JSON.parse(localStorage.getItem('comments')) || {};
-            const postComments = allComments[postId] || [];
-            commentsList.innerHTML = '';
-            postComments.forEach(comment => addCommentToDOM(comment, commentsList, false));
+        async function loadComments(postId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/posts/${postId}/comments`);
+                const comments = await response.json();
+                commentsList.innerHTML = '';
+                comments.forEach(comment => addCommentToDOM(comment, commentsList));
+            } catch (error) {
+                console.error(`Error loading comments for post ${postId}:`, error);
+            }
         }
 
         // 添加评论到 DOM
-        function addCommentToDOM(comment, container, save = true) {
+        function addCommentToDOM(comment, container) {
             const commentElement = document.createElement('div');
             commentElement.classList.add('comment-item');
             commentElement.innerHTML = `
@@ -72,64 +84,72 @@ document.addEventListener('DOMContentLoaded', () => {
                 <small>${new Date(comment.timestamp).toLocaleString()}</small>
             `;
             container.appendChild(commentElement);
-
-            if (save) {
-                const allComments = JSON.parse(localStorage.getItem('comments')) || {};
-                if (!allComments[post.timestamp]) { // 使用文章时间戳作为唯一ID
-                    allComments[post.timestamp] = [];
-                }
-                allComments[post.timestamp].push(comment);
-                localStorage.setItem('comments', JSON.stringify(allComments));
-            }
         }
 
         // 处理评论提交
-        commentForm.addEventListener('submit', (e) => {
+        commentForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const author = commentAuthorInput.value.trim();
             const text = commentTextInput.value.trim();
 
             if (author && text) {
-                const newComment = {
-                    author: author,
-                    text: text,
-                    timestamp: new Date().toISOString()
-                };
-                addCommentToDOM(newComment, commentsList);
-                commentAuthorInput.value = '';
-                commentTextInput.value = '';
+                try {
+                    const response = await fetch(`${API_BASE_URL}/posts/${post.id}/comments`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ author, text })
+                    });
+                    const newComment = await response.json();
+                    if (response.ok) {
+                        addCommentToDOM(newComment, commentsList);
+                        commentAuthorInput.value = '';
+                        commentTextInput.value = '';
+                    } else {
+                        alert(`发表评论失败: ${newComment.message || response.statusText}`);
+                    }
+                } catch (error) {
+                    console.error('Error posting comment:', error);
+                    alert('发表评论失败，请检查服务器是否运行。');
+                }
             } else {
                 alert('评论者姓名和评论内容都不能为空！');
             }
         });
 
         // 页面加载时加载评论
-        loadComments(post.timestamp); // 使用文章时间戳作为唯一ID
-
-
-        if (save) {
-            const posts = JSON.parse(localStorage.getItem('posts')) || [];
-            posts.push(post);
-            localStorage.setItem('posts', JSON.stringify(posts));
-        }
+        loadComments(post.id);
     }
 
     // 处理表单提交
-    postForm.addEventListener('submit', (e) => {
+    postForm.addEventListener('submit', async (e) => {
         e.preventDefault(); // 阻止表单默认提交行为
 
         const title = postTitleInput.value.trim();
         const content = postContentInput.value.trim();
 
         if (title && content) {
-            const newPost = {
-                title: title,
-                content: content,
-                timestamp: new Date().toISOString()
-            };
-            addPostToDOM(newPost); // 添加新文章并保存
-            postTitleInput.value = ''; // 清空输入框
-            postContentInput.value = '';
+            try {
+                const response = await fetch(`${API_BASE_URL}/posts`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ title, content })
+                });
+                const newPost = await response.json();
+                if (response.ok) {
+                    addPostToDOM(newPost); // 添加新文章并保存
+                    postTitleInput.value = ''; // 清空输入框
+                    postContentInput.value = '';
+                } else {
+                    alert(`发布文章失败: ${newPost.message || response.statusText}`);
+                }
+            } catch (error) {
+                console.error('Error posting article:', error);
+                alert('发布文章失败，请检查服务器是否运行。');
+            }
         } else {
             alert('标题和内容都不能为空！');
         }
