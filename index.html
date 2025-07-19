@@ -9,6 +9,23 @@
 <body>
     <h1>欢迎来到我的网站！</h1>
     <p>这是一个简单的HTML页面。</p>
+
+    <div class="post-section">
+        <h2>发布新文章/公告</h2>
+        <form id="postForm">
+            <input type="text" id="postTitle" placeholder="文章标题" required>
+            <textarea id="postContent" placeholder="文章内容" required></textarea>
+            <button type="submit">发布</button>
+        </form>
+    </div>
+
+    <div class="posts-display">
+        <h2>最新文章/公告</h2>
+        <div id="postsContainer">
+            <!-- 文章将在这里动态加载 -->
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
