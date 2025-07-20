@@ -30,14 +30,13 @@
 
   <div class="convention-section">
       <h2>网站公约</h2>
-      <p>为了更好地知道是谁写的帖子或评论，请在最后一段话里加上你的网名（可以简写）。
-        提示：手机用户如果觉得网页布局过于拥挤可双指朝内滑动强制缩放网
-      </p>
+      <p>为了更好地知道是谁写的帖子或评论，请在最后一段话里加上你的网名（可以简写）。</p>
   </div>
 
   <div class="post-section">
       <h2>发布新文章/公告</h2>
       <form id="postForm">
+          <input type="text" id="authorNicknameInput" placeholder="你的网名 (可选)">
           <input type="text" id="postTitle" placeholder="文章标题" required>
           <textarea id="postContent" placeholder="文章内容" required></textarea>
           <label for="postCategory">选择分类:</label>
@@ -63,7 +62,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
         // 1. Supabase 初始化
         const SUPABASE_URL = 'https://ucztckxladpgbzjvcwck.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjenRja3hsYWRwZ2J6anZjd2NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5MTkxNTcsImV4cCI6MjA2ODQ5NTE1N30.kLa03Hgd33_roU_B3-wSVKwjeaJLxwddu4_v_Y05RBw';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjenRja3hsYWRwZ2J6anZjd2NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5MTkxNTcsImeXAiOjIwNjg0OTUxNTd9.kLa03Hgd33_roU_B3-wSVKwjeaJLxwddu4_v_Y05RBw';
 
         if (typeof supabase === 'undefined') {
             console.error("Supabase library not loaded. Please check the CDN link.");
@@ -76,8 +75,9 @@
         const postForm = document.getElementById('postForm');
         const postsContainer = document.getElementById('postsContainer');
         const postSearchInput = document.getElementById('postSearchInput');
-        const postCategorySelect = document.getElementById('postCategory'); // 获取发布文章时的分类选择框
-        const categoryFilterSelect = document.getElementById('categoryFilter'); // 获取分类筛选选择框
+        const postCategorySelect = document.getElementById('postCategory');
+        const categoryFilterSelect = document.getElementById('categoryFilter');
+        const authorNicknameInput = document.getElementById('authorNicknameInput'); // 获取网名输入框元素
 
 
         // 辅助函数：加载评论
@@ -96,7 +96,6 @@
         }
 
         // 2. 页面加载时读取文章和评论
-        // 现在 loadPosts 函数可以接受一个可选的 searchTerm 和 selectedCategory 参数
         async function loadPosts(searchTerm = '', selectedCategory = '') {
             console.log("Attempting to load posts with search term:", searchTerm, "and category:", selectedCategory);
             let query = supabaseClient
@@ -139,10 +138,11 @@
             for (const p of posts) {
                 const postDiv = document.createElement('div');
                 postDiv.className = 'post';
+                // 在这里显示作者网名
                 postDiv.innerHTML = `
                     <h3>${p.title}</h3>
                     <p>${p.content}</p>
-                    <small>分类: ${p.category || '未分类'} | 发布于: ${new Date(p.created_at).toLocaleString()}</small>
+                    <small>作者: ${p.author_nickname || '匿名'} | 分类: ${p.category || '未分类'} | 发布于: ${new Date(p.created_at).toLocaleString()}</small>
                     <div class="comments-section" id="comments-for-post-${p.id}">
                         <h4>评论:</h4>
                         <div class="comments-list"></div>
@@ -189,43 +189,50 @@
                     }
 
                     commentInput.value = '';
-                    loadPosts(postSearchInput.value, categoryFilterSelect.value); // 发布评论后，保持搜索和分类状态刷新
+                    loadPosts(postSearchInput.value, categoryFilterSelect.value);
                 });
             });
         }
 
-        // 3. 发布文章 (新增了分类字段)
+        // 3. 发布文章 (新增了作者网名字段)
         postForm.addEventListener('submit', async e => {
             e.preventDefault();
+            const authorNickname = authorNicknameInput.value.trim(); // 获取作者网名并去除首尾空格
             const title = document.getElementById('postTitle').value;
             const content = document.getElementById('postContent').value;
-            const category = postCategorySelect.value; // 获取选择的分类
+            const category = postCategorySelect.value;
 
             if (!category) {
                 alert('请选择一个分类！');
                 return;
             }
 
-            console.log("Attempting to post article to:", SUPABASE_URL, "with category:", category);
-            const { error } = await supabaseClient.from('posts').insert({ title, content, category }); // 插入时包含 category 字段
+            console.log("Attempting to post article with author:", authorNickname, "category:", category);
+            const { error } = await supabaseClient.from('posts').insert({
+                title,
+                content,
+                category,
+                author_nickname: authorNickname || '匿名用户' // 如果网名为空，则默认为“匿名用户”
+            });
             if (error) {
                 alert('发布文章失败：' + error.message);
                 console.error("Error posting article:", error);
                 return;
             }
             postForm.reset();
-            postCategorySelect.value = ''; // 重置分类选择
-            loadPosts(postSearchInput.value, categoryFilterSelect.value); // 发布文章后，保持搜索和分类状态刷新
+            postCategorySelect.value = '';
+            authorNicknameInput.value = ''; // 清空网名输入框
+            loadPosts(postSearchInput.value, categoryFilterSelect.value);
         });
 
         // 4. 搜索功能：监听搜索框输入
         postSearchInput.addEventListener('input', () => {
-            loadPosts(postSearchInput.value, categoryFilterSelect.value); // 每次输入时都重新加载帖子
+            loadPosts(postSearchInput.value, categoryFilterSelect.value);
         });
 
         // 5. 分类筛选功能：监听分类选择框变化
         categoryFilterSelect.addEventListener('change', () => {
-            loadPosts(postSearchInput.value, categoryFilterSelect.value); // 分类变化时重新加载帖子
+            loadPosts(postSearchInput.value, categoryFilterSelect.value);
         });
 
         // 页面加载完成后立即执行（首次加载）
