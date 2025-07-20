@@ -27,54 +27,132 @@
   </div>
 
   <script>
-    // Supabase 初始化
-    // 确保 'https://ucztckxladpgbzjvcwck.supabase.co' 和 'eyJhbGciOiJIUzI1Ni...' 是纯净的字符串，没有空格或换行
-    const supabaseClient = supabase.createClient(
-      'https://ucztckxladpgbzjvcwck.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjenRja3hsYWRwZ2J6anZjd2NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5MTkxNTcsImV4cCI6MjA2ODQ5NTE1N30.kLa03Hgd33_roU_B3-wSVKwjeaJLxwddu4_v_Y05RBw'
-    );
+    document.addEventListener('DOMContentLoaded', async () => {
+        // 1. Supabase 初始化
+        const SUPABASE_URL = 'https://ucztckxladpgbzjvcwck.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjenRja3hsYWRwZ2J6anZjd2NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5MTkxNTcsImV4cCI6MjA2ODQ5NTE1N30.kLa03Hgd33_roU_B3-wSVKwjeaJLxwddu4_v_Y05RBw';
 
-    const form = document.getElementById('postForm');
-    const container = document.getElementById('postsContainer');
+        if (typeof supabase === 'undefined') {
+            console.error("Supabase library not loaded. Please check the CDN link.");
+            alert("Supabase 库未加载，请检查网络和 CDN 链接。");
+            return;
+        }
 
-    // 页面加载时读取文章
-    async function loadPosts() {
-      const { data, error } = await supabaseClient
-        .from('posts')
-        .select('*')
-        .order('created_at', { ascending: false });
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      if (error) {
-        container.innerHTML = '<p>加载文章失败：' + error.message + '</p>';
-        console.error("Error loading posts:", error); // 打印详细错误到控制台
-        return;
-      }
-      container.innerHTML = '';
-      data.forEach(p => {
-        const div = document.createElement('div');
-        div.className = 'post';
-        div.innerHTML = `<h3>${p.title}</h3><p>${p.content}</p>`;
-        container.appendChild(div);
-      });
-    }
+        const postForm = document.getElementById('postForm'); // 重命名为 postForm 以避免冲突
+        const postsContainer = document.getElementById('postsContainer'); // 重命名为 postsContainer
 
-    // 发布文章
-    form.addEventListener('submit', async e => {
-      e.preventDefault();
-      const title = document.getElementById('postTitle').value;
-      const content = document.getElementById('postContent').value;
-      const { error } = await supabaseClient.from('posts').insert({ title, content });
-      if (error) {
-        alert('发布文章失败：' + error.message);
-        console.error("Error posting article:", error); // 打印详细错误到控制台
-        return;
-      }
-      form.reset();
-      loadPosts(); // 发布成功后重新加载文章列表
+        // 辅助函数：加载评论
+        async function loadComments(postId) {
+            const { data: comments, error: commentsError } = await supabaseClient
+                .from('comments')
+                .select('*')
+                .eq('post_id', postId) // 筛选出属于当前帖子的评论
+                .order('created_at', { ascending: true }); // 按时间正序排列
+
+            if (commentsError) {
+                console.error("Error loading comments for post", postId, commentsError);
+                return []; // 返回空数组，避免崩溃
+            }
+            return comments;
+        }
+
+        // 2. 页面加载时读取文章和评论
+        async function loadPosts() {
+            console.log("Attempting to load posts from:", SUPABASE_URL); // 调试信息
+            const { data: posts, error: postsError } = await supabaseClient
+                .from('posts')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (postsError) {
+                postsContainer.innerHTML = '<p>加载文章失败：' + postsError.message + '</p>';
+                console.error("Error loading posts:", postsError);
+                return;
+            }
+            postsContainer.innerHTML = ''; // 清空现有内容
+
+            for (const p of posts) {
+                const postDiv = document.createElement('div');
+                postDiv.className = 'post';
+                postDiv.innerHTML = `
+                    <h3>${p.title}</h3>
+                    <p>${p.content}</p>
+                    <small>发布于: ${new Date(p.created_at).toLocaleString()}</small>
+                    <div class="comments-section" id="comments-for-post-${p.id}">
+                        <h4>评论:</h4>
+                        <div class="comments-list"></div>
+                        <form class="comment-form" data-post-id="${p.id}">
+                            <input type="text" placeholder="你的评论..." class="comment-input" required>
+                            <button type="submit">评论</button>
+                        </form>
+                    </div>
+                `;
+                postsContainer.appendChild(postDiv);
+
+                // 加载并显示评论
+                const commentsListDiv = postDiv.querySelector('.comments-list');
+                const comments = await loadComments(p.id);
+                if (comments.length === 0) {
+                    commentsListDiv.innerHTML = '<p>暂无评论。</p>';
+                } else {
+                    comments.forEach(comment => {
+                        const commentDiv = document.createElement('div');
+                        commentDiv.className = 'comment-item';
+                        commentDiv.innerHTML = `
+                            <p>${comment.comment_text}</p>
+                            <small>${new Date(comment.created_at).toLocaleString()}</small>
+                        `;
+                        commentsListDiv.appendChild(commentDiv);
+                    });
+                }
+            }
+
+            // 绑定评论表单提交事件 (在所有帖子加载完后绑定)
+            document.querySelectorAll('.comment-form').forEach(form => {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const postId = e.target.dataset.postId;
+                    const commentInput = e.target.querySelector('.comment-input');
+                    const commentText = commentInput.value;
+
+                    const { error: commentError } = await supabaseClient
+                        .from('comments')
+                        .insert({ post_id: postId, comment_text: commentText });
+
+                    if (commentError) {
+                        alert('发布评论失败：' + commentError.message);
+                        console.error("Error posting comment:", commentError);
+                        return;
+                    }
+
+                    commentInput.value = ''; // 清空输入框
+                    loadPosts(); // 重新加载所有帖子以更新评论列表
+                });
+            });
+        }
+
+        // 3. 发布文章
+        postForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            const title = document.getElementById('postTitle').value;
+            const content = document.getElementById('postContent').value;
+
+            console.log("Attempting to post article to:", SUPABASE_URL); // 调试信息
+            const { error } = await supabaseClient.from('posts').insert({ title, content });
+            if (error) {
+                alert('发布文章失败：' + error.message);
+                console.error("Error posting article:", error);
+                return;
+            }
+            postForm.reset();
+            loadPosts(); // 发布成功后重新加载文章列表
+        });
+
+        // 页面加载完成后立即执行
+        loadPosts();
     });
-
-    // 页面加载完成后立即执行
-    loadPosts();
   </script>
 </body>
 </html>
