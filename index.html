@@ -11,6 +11,12 @@
   <h1>欢迎来到我的网站！</h1>
   <p>这是一个简单的HTML页面。</p>
 
+  <!-- 这里是新增的“公约”部分 -->
+  <div class="convention-section">
+      <h2>网站公约</h2>
+      <p>为了更好地知道是谁写的帖子或评论，请在最后一段话里加上你的网名（可以简写）。</p>
+  </div>
+
   <div class="post-section">
       <h2>发布新文章/公告</h2>
       <form id="postForm">
@@ -23,7 +29,8 @@
   <div class="posts-display">
       <h2>最新文章/公告</h2>
       <div id="postsContainer">
-          </div>
+          <!-- 文章和评论将在这里动态加载 -->
+      </div>
   </div>
 
   <script>
@@ -40,27 +47,27 @@
 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const postForm = document.getElementById('postForm'); // 重命名为 postForm 以避免冲突
-        const postsContainer = document.getElementById('postsContainer'); // 重命名为 postsContainer
+        const postForm = document.getElementById('postForm');
+        const postsContainer = document.getElementById('postsContainer');
 
         // 辅助函数：加载评论
         async function loadComments(postId) {
             const { data: comments, error: commentsError } = await supabaseClient
                 .from('comments')
                 .select('*')
-                .eq('post_id', postId) // 筛选出属于当前帖子的评论
-                .order('created_at', { ascending: true }); // 按时间正序排列
+                .eq('post_id', postId)
+                .order('created_at', { ascending: true });
 
             if (commentsError) {
                 console.error("Error loading comments for post", postId, commentsError);
-                return []; // 返回空数组，避免崩溃
+                return [];
             }
             return comments;
         }
 
         // 2. 页面加载时读取文章和评论
         async function loadPosts() {
-            console.log("Attempting to load posts from:", SUPABASE_URL); // 调试信息
+            console.log("Attempting to load posts from:", SUPABASE_URL);
             const { data: posts, error: postsError } = await supabaseClient
                 .from('posts')
                 .select('*')
@@ -71,7 +78,7 @@
                 console.error("Error loading posts:", postsError);
                 return;
             }
-            postsContainer.innerHTML = ''; // 清空现有内容
+            postsContainer.innerHTML = '';
 
             for (const p of posts) {
                 const postDiv = document.createElement('div');
@@ -91,7 +98,6 @@
                 `;
                 postsContainer.appendChild(postDiv);
 
-                // 加载并显示评论
                 const commentsListDiv = postDiv.querySelector('.comments-list');
                 const comments = await loadComments(p.id);
                 if (comments.length === 0) {
@@ -109,7 +115,6 @@
                 }
             }
 
-            // 绑定评论表单提交事件 (在所有帖子加载完后绑定)
             document.querySelectorAll('.comment-form').forEach(form => {
                 form.addEventListener('submit', async (e) => {
                     e.preventDefault();
@@ -127,8 +132,8 @@
                         return;
                     }
 
-                    commentInput.value = ''; // 清空输入框
-                    loadPosts(); // 重新加载所有帖子以更新评论列表
+                    commentInput.value = '';
+                    loadPosts();
                 });
             });
         }
@@ -139,7 +144,7 @@
             const title = document.getElementById('postTitle').value;
             const content = document.getElementById('postContent').value;
 
-            console.log("Attempting to post article to:", SUPABASE_URL); // 调试信息
+            console.log("Attempting to post article to:", SUPABASE_URL);
             const { error } = await supabaseClient.from('posts').insert({ title, content });
             if (error) {
                 alert('发布文章失败：' + error.message);
@@ -147,10 +152,9 @@
                 return;
             }
             postForm.reset();
-            loadPosts(); // 发布成功后重新加载文章列表
+            loadPosts();
         });
 
-        // 页面加载完成后立即执行
         loadPosts();
     });
   </script>
