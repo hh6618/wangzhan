@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="text" class="comment-author" placeholder="您的名字" required>
                     <textarea class="comment-text" placeholder="您的评论" required></textarea>
                     <button type="submit">发表评论</button>
+                    
                 </form>
             </div>
         `;

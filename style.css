@@ -206,3 +206,73 @@ p {
 .comment-form button:hover {
     background-color: #218838;
 }
+/* 搜索框容器样式 */
+.search-container {
+    position: absolute; /* 绝对定位，脱离文档流 */
+    top: 20px;         /* 距离顶部 20px */
+    left: 20px;        /* 距离左侧 20px */
+    z-index: 1000;     /* 确保它在其他内容之上 */
+    background-color: #fff; /* 背景色 */
+    padding: 10px 15px; /* 内边距 */
+    border-radius: 8px; /* 圆角 */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* 阴影 */
+    display: flex; /* 使用 flex 布局，如果未来有多个元素 */
+    align-items: center; /* 垂直居中对齐 */
+}
+
+/* 搜索输入框样式 */
+#postSearchInput {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1em;
+    width: 200px; /* 固定宽度 */
+    outline: none; /* 移除点击时的轮廓 */
+    transition: border-color 0.3s ease;
+}
+
+#postSearchInput:focus {
+    border-color: #007bff; /* 聚焦时边框变色 */
+}
+
+/* 分类筛选器容器样式 */
+.category-filter-container {
+    margin: 20px auto; /* 与body内其他元素的间距 */
+    max-width: 800px; /* 与其他主要内容区宽度一致 */
+    text-align: left; /* 内容靠左对齐 */
+    padding: 15px 20px; /* 内边距 */
+    background-color: #f9f9f9; /* 背景色 */
+    border-radius: 8px; /* 圆角 */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); /* 阴影 */
+    display: flex; /* 内部元素排列 */
+    align-items: center; /* 垂直居中对齐 */
+    gap: 10px; /* 标签和选择框之间的间距 */
+    margin-top: 100px; /* 为了不被搜索框覆盖，需要向下推一点 */
+}
+
+.category-filter-container label {
+    font-weight: bold;
+    color: #555;
+}
+
+/* 分类筛选下拉框和发布文章分类下拉框的通用样式 */
+#categoryFilter, #postCategory {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1em;
+    background-color: #fff;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+#categoryFilter:focus, #postCategory:focus {
+    border-color: #007bff;
+}
+
+/* 为发布文章的分类选择框添加额外间距 */
+#postCategory {
+    margin-top: 5px; /* 在输入框和按钮之间增加一点垂直间距 */
+    margin-bottom: 5px;
+}
