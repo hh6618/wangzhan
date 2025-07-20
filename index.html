@@ -30,7 +30,8 @@
 
   <div class="convention-section">
       <h2>网站公约</h2>
-      <p>为了更好地知道是谁写的帖子或评论，请在最后一段话里加上你的网名（可以简写）。但是必填哟。
+      <p>为了更好地知道是谁写的帖子或评论，请在最后一段话里加上你的网名（可以简写）。
+        但是必填哟。
         提示：手机用户可以通过如果觉得网页布局过于拥挤可双指朝内滑动强制缩放网站
       </p>
   </div>
@@ -81,8 +82,39 @@
         const categoryFilterSelect = document.getElementById('categoryFilter');
         const authorNicknameInput = document.getElementById('authorNicknameInput');
 
+        // ==== 新增：本地存储点赞状态的辅助函数 ====
+        const LIKED_POSTS_STORAGE_KEY = 'liked_posts_ids';
+
+        function getLikedPostsFromLocalStorage() {
+            const likedPostsJson = localStorage.getItem(LIKED_POSTS_STORAGE_KEY);
+            return likedPostsJson ? JSON.parse(likedPostsJson) : [];
+        }
+
+        function addLikedPostToLocalStorage(postId) {
+            const likedPosts = getLikedPostsFromLocalStorage();
+            if (!likedPosts.includes(postId)) {
+                likedPosts.push(postId);
+                localStorage.setItem(LIKED_POSTS_STORAGE_KEY, JSON.stringify(likedPosts));
+            }
+        }
+
+        function removeLikedPostFromLocalStorage(postId) {
+            let likedPosts = getLikedPostsFromLocalStorage();
+            likedPosts = likedPosts.filter(id => id !== postId);
+            localStorage.setItem(LIKED_POSTS_STORAGE_KEY, JSON.stringify(likedPosts));
+        }
+
+        function isPostLikedLocally(postId) {
+            return getLikedPostsFromLocalStorage().includes(postId);
+        }
+        // ============================================
+
+
         // 辅助函数：渲染单个帖子（为了实时更新和点赞功能重用）
         async function renderPost(p) {
+            const isLiked = isPostLikedLocally(p.id); // 检查本地是否已点赞
+            const likeButtonClass = isLiked ? 'like-button liked' : 'like-button'; // 添加 'liked' 类
+
             const postDiv = document.createElement('div');
             postDiv.className = 'post';
             postDiv.innerHTML = `
@@ -90,10 +122,10 @@
                 <p>${p.content}</p>
                 <small>作者: ${p.author_nickname || '匿名'} | 分类: ${p.category || '未分类'} | 发布于: ${new Date(p.created_at).toLocaleString()}</small>
                 <div class="post-actions">
-                    <button class="like-button" data-post-id="${p.id}">
-                        👍 (<span class="like-count">${p.likes_count || 0}</span>)
+                    <button class="${likeButtonClass}" data-post-id="${p.id}" data-is-liked="${isLiked}">
+                        ${isLiked ? '取消赞' : '👍'} (<span class="like-count">${p.likes_count || 0}</span>)
                     </button>
-                    </div>
+                </div>
                 <div class="comments-section" id="comments-for-post-${p.id}">
                     <h4>评论:</h4>
                     <div class="comments-list"></div>
@@ -127,10 +159,22 @@
             const postId = button.dataset.postId;
             const likeCountSpan = button.querySelector('.like-count');
             let currentLikes = parseInt(likeCountSpan.textContent);
+            let isCurrentlyLiked = isPostLikedLocally(postId); // 重新从本地存储获取状态
 
-            // 递增本地计数器
-            currentLikes++;
-            likeCountSpan.textContent = currentLikes;
+            if (isCurrentlyLiked) {
+                // 如果当前已点赞，则取消点赞 (-1)
+                currentLikes--;
+                removeLikedPostFromLocalStorage(postId);
+                button.classList.remove('liked');
+                button.innerHTML = `👍 (<span class="like-count">${currentLikes}</span>)`; // 更新按钮文本
+            } else {
+                // 如果当前未点赞，则点赞 (+1)
+                currentLikes++;
+                addLikedPostToLocalStorage(postId);
+                button.classList.add('liked');
+                button.innerHTML = `取消赞 (<span class="like-count">${currentLikes}</span>)`; // 更新按钮文本
+            }
+            likeCountSpan.textContent = currentLikes; // 更新显示的数字
 
             // 更新 Supabase 中的点赞数
             const { error } = await supabaseClient
@@ -140,9 +184,20 @@
 
             if (error) {
                 console.error("Error updating like count:", error);
-                // 如果更新失败，可以考虑回滚本地计数器或显示错误信息
-                alert('点赞失败，请稍后再试。');
-                likeCountSpan.textContent = currentLikes - 1; // 回滚显示
+                // 如果更新失败，回滚本地状态和显示
+                alert('操作失败，请稍后再试。');
+                if (isCurrentlyLiked) { // 如果是取消点赞失败，则重新点赞
+                    currentLikes++;
+                    addLikedPostToLocalStorage(postId);
+                    button.classList.add('liked');
+                    button.innerHTML = `取消赞 (<span class="like-count">${currentLikes}</span>)`;
+                } else { // 如果是点赞失败，则取消点赞
+                    currentLikes--;
+                    removeLikedPostFromLocalStorage(postId);
+                    button.classList.remove('liked');
+                    button.innerHTML = `👍 (<span class="like-count">${currentLikes}</span>)`;
+                }
+                likeCountSpan.textContent = currentLikes; // 再次更新显示的数字
             }
         }
 
@@ -270,7 +325,6 @@
             postForm.reset();
             postCategorySelect.value = '';
             authorNicknameInput.value = '';
-            // 实时订阅会处理页面更新
         });
 
         // 4. 搜索功能：监听搜索框输入
@@ -284,26 +338,42 @@
         });
 
 
-        // 6. 实时更新：订阅 posts 表的 INSERT 事件
+        // 6. 实时更新：订阅 posts 表的 INSERT 事件 (更新为也监听 UPDATE)
         const postsChannel = supabaseClient.channel('posts_changes');
         postsChannel
             .on(
                 'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'posts' },
+                { event: '*', schema: 'public', table: 'posts' }, // 监听 posts 表的所有变化，包括 UPDATE
                 async (payload) => {
-                    console.log('New post received in real-time!', payload.new);
-                    const newPostData = payload.new;
+                    const changedPostData = payload.new || payload.old; // INSERT/UPDATE 用 new，DELETE 用 old
+                    if (!changedPostData) return; // 确保有数据
 
                     const currentSearchTerm = postSearchInput.value.toLowerCase();
                     const currentCategory = categoryFilterSelect.value;
+                    const matchesSearch = !currentSearchTerm || changedPostData.title.toLowerCase().includes(currentSearchTerm);
+                    const matchesCategory = !currentCategory || changedPostData.category === currentCategory;
 
-                    const matchesSearch = !currentSearchTerm || newPostData.title.toLowerCase().includes(currentSearchTerm);
-                    const matchesCategory = !currentCategory || newPostData.category === currentCategory;
-
-                    if (matchesSearch && matchesCategory) {
-                        const newPostDiv = await renderPost(newPostData);
+                    if (payload.eventType === 'INSERT' && matchesSearch && matchesCategory) {
+                        console.log('New post received in real-time!', newPostData);
+                        const newPostDiv = await renderPost(changedPostData);
                         postsContainer.prepend(newPostDiv);
-                        bindPostInteractionEvents(); // 为新添加的帖子的交互（点赞和评论）绑定事件
+                        bindPostInteractionEvents();
+                    } else if (payload.eventType === 'UPDATE' && matchesSearch && matchesCategory) {
+                        console.log('Post updated in real-time!', changedPostData);
+                        // 找到页面上对应的帖子元素并更新其点赞数
+                        const existingPostDiv = document.querySelector(`.post [data-post-id="${changedPostData.id}"]`).closest('.post');
+                        if (existingPostDiv) {
+                            // 重新渲染该帖子以更新所有信息，包括点赞数
+                            const updatedPostDiv = await renderPost(changedPostData);
+                            existingPostDiv.replaceWith(updatedPostDiv);
+                            bindPostInteractionEvents(); // 重新绑定事件
+                        }
+                    } else if (payload.eventType === 'DELETE') {
+                        // 如果帖子被删除，从DOM中移除它
+                        const deletedPostDiv = document.querySelector(`.post [data-post-id="${changedPostData.id}"]`).closest('.post');
+                        if (deletedPostDiv) {
+                            deletedPostDiv.remove();
+                        }
                     }
                 }
             )
