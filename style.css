@@ -276,3 +276,46 @@ p {
     margin-top: 5px; /* 在输入框和按钮之间增加一点垂直间距 */
     margin-bottom: 5px;
 }
+/* 帖子操作区样式 (包含点赞按钮) */
+.post-actions {
+    display: flex; /* 使用 Flexbox 布局 */
+    justify-content: flex-end; /* 让内容（按钮）靠右对齐 */
+    align-items: center; /* 垂直居中 */
+    gap: 10px; /* 元素之间的间距 */
+    margin-top: 15px; /* 与帖子内容的顶部间距 */
+    padding-top: 10px; /* 内部上边距 */
+    border-top: 1px dashed #f0f0f0; /* 顶部虚线分隔 */
+    margin-bottom: 15px; /* 与评论区顶部的间距 */
+}
+
+/* 点赞按钮样式 */
+.like-button {
+    background-color: #f8f9fa; /* 浅灰色背景 */
+    color: #007bff; /* 蓝色文字/图标 */
+    border: 1px solid #007bff; /* 蓝色边框 */
+    padding: 6px 12px; /* 内边距 */
+    border-radius: 20px; /* 大圆角，使其看起来像胶囊 */
+    cursor: pointer;
+    font-size: 0.9em;
+    display: flex; /* 让图标和数字在同一行 */
+    align-items: center; /* 垂直居中 */
+    gap: 5px; /* 图标和数字之间的间距 */
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.like-button:hover {
+    background-color: #007bff; /* 悬停时蓝色背景 */
+    color: white; /* 悬停时白色文字 */
+}
+
+/* 点赞计数数字样式 (可选，如果想单独控制数字的样式) */
+.like-button .like-count {
+    font-weight: bold; /* 数字加粗 */
+}
+
+/* 调整评论区和评论表单的顶部间距，与点赞区更协调 */
+.comments-section {
+    margin-top: 0px; /* 由于 .post-actions 已经有了 margin-bottom，这里可以减少或移除 */
+    padding-top: 15px;
+    border-top: 1px dashed #ddd;
+}
