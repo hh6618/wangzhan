@@ -30,7 +30,7 @@
 
   <div class="convention-section">
       <h2>网站公约</h2>
-      <p>为了更好地知道是谁写的帖子或评论，请在最后一段话里加上你的网名（可以简写）但是必填哟。
+      <p>为了更好地知道是谁写的帖子或评论，请在最后一段话里加上你的网名（可以简写）。但是必填哟。
         提示：手机用户可以通过如果觉得网页布局过于拥挤可双指朝内滑动强制缩放网站
       </p>
   </div>
@@ -79,8 +79,32 @@
         const postSearchInput = document.getElementById('postSearchInput');
         const postCategorySelect = document.getElementById('postCategory');
         const categoryFilterSelect = document.getElementById('categoryFilter');
-        const authorNicknameInput = document.getElementById('authorNicknameInput'); // 获取网名输入框元素
+        const authorNicknameInput = document.getElementById('authorNicknameInput');
 
+        // 辅助函数：渲染单个帖子（为了实时更新和点赞功能重用）
+        async function renderPost(p) {
+            const postDiv = document.createElement('div');
+            postDiv.className = 'post';
+            postDiv.innerHTML = `
+                <h3>${p.title}</h3>
+                <p>${p.content}</p>
+                <small>作者: ${p.author_nickname || '匿名'} | 分类: ${p.category || '未分类'} | 发布于: ${new Date(p.created_at).toLocaleString()}</small>
+                <div class="post-actions">
+                    <button class="like-button" data-post-id="${p.id}">
+                        👍 (<span class="like-count">${p.likes_count || 0}</span>)
+                    </button>
+                    </div>
+                <div class="comments-section" id="comments-for-post-${p.id}">
+                    <h4>评论:</h4>
+                    <div class="comments-list"></div>
+                    <form class="comment-form" data-post-id="${p.id}">
+                        <input type="text" placeholder="你的评论..." class="comment-input" required>
+                        <button type="submit">评论</button>
+                    </form>
+                </div>
+            `;
+            return postDiv;
+        }
 
         // 辅助函数：加载评论
         async function loadComments(postId) {
@@ -97,6 +121,67 @@
             return comments;
         }
 
+        // 处理点赞按钮点击事件
+        async function handleLikeButtonClick(e) {
+            const button = e.currentTarget;
+            const postId = button.dataset.postId;
+            const likeCountSpan = button.querySelector('.like-count');
+            let currentLikes = parseInt(likeCountSpan.textContent);
+
+            // 递增本地计数器
+            currentLikes++;
+            likeCountSpan.textContent = currentLikes;
+
+            // 更新 Supabase 中的点赞数
+            const { error } = await supabaseClient
+                .from('posts')
+                .update({ likes_count: currentLikes })
+                .eq('id', postId);
+
+            if (error) {
+                console.error("Error updating like count:", error);
+                // 如果更新失败，可以考虑回滚本地计数器或显示错误信息
+                alert('点赞失败，请稍后再试。');
+                likeCountSpan.textContent = currentLikes - 1; // 回滚显示
+            }
+        }
+
+        // 绑定评论表单和点赞按钮的事件
+        function bindPostInteractionEvents() {
+            // 绑定评论表单提交事件
+            document.querySelectorAll('.comment-form').forEach(form => {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const postId = e.target.dataset.postId;
+                    const commentInput = e.target.querySelector('.comment-input');
+                    const commentText = commentInput.value;
+
+                    const { error: commentError } = await supabaseClient
+                        .from('comments')
+                        .insert({ post_id: postId, comment_text: commentText });
+
+                    if (commentError) {
+                        alert('发布评论失败：' + commentError.message);
+                        console.error("Error posting comment:", commentError);
+                        return;
+                    }
+
+                    commentInput.value = '';
+                    loadPosts(postSearchInput.value, categoryFilterSelect.value); // 保持搜索和分类状态刷新
+                });
+            });
+
+            // 绑定点赞按钮点击事件
+            document.querySelectorAll('.like-button').forEach(button => {
+                // 确保事件只绑定一次，避免重复绑定导致多次触发
+                if (!button.dataset.listenerBound) {
+                    button.addEventListener('click', handleLikeButtonClick);
+                    button.dataset.listenerBound = 'true'; // 标记已绑定
+                }
+            });
+        }
+
+
         // 2. 页面加载时读取文章和评论
         async function loadPosts(searchTerm = '', selectedCategory = '') {
             console.log("Attempting to load posts with search term:", searchTerm, "and category:", selectedCategory);
@@ -105,12 +190,10 @@
                 .select('*')
                 .order('created_at', { ascending: false });
 
-            // 如果有搜索词，则添加过滤条件
             if (searchTerm) {
                 query = query.ilike('title', `%${searchTerm}%`);
             }
 
-            // 如果有选择分类（且不是“所有分类”），则添加分类过滤条件
             if (selectedCategory) {
                 query = query.eq('category', selectedCategory);
             }
@@ -130,30 +213,13 @@
                 if (selectedCategory) message += `分类为 "${selectedCategory}" 的`;
                 message += '帖子。';
                 postsContainer.innerHTML = `<p>${message}</p>`;
-                return;
             } else if (posts.length === 0) {
                  postsContainer.innerHTML = '<p>目前还没有任何帖子。</p>';
-                 return;
             }
 
 
             for (const p of posts) {
-                const postDiv = document.createElement('div');
-                postDiv.className = 'post';
-                // 在这里显示作者网名
-                postDiv.innerHTML = `
-                    <h3>${p.title}</h3>
-                    <p>${p.content}</p>
-                    <small>作者: ${p.author_nickname || '匿名'} | 分类: ${p.category || '未分类'} | 发布于: ${new Date(p.created_at).toLocaleString()}</small>
-                    <div class="comments-section" id="comments-for-post-${p.id}">
-                        <h4>评论:</h4>
-                        <div class="comments-list"></div>
-                        <form class="comment-form" data-post-id="${p.id}">
-                            <input type="text" placeholder="你的评论..." class="comment-input" required>
-                            <button type="submit">评论</button>
-                        </form>
-                    </div>
-                `;
+                const postDiv = await renderPost(p);
                 postsContainer.appendChild(postDiv);
 
                 const commentsListDiv = postDiv.querySelector('.comments-list');
@@ -172,34 +238,13 @@
                     });
                 }
             }
-
-            document.querySelectorAll('.comment-form').forEach(form => {
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const postId = e.target.dataset.postId;
-                    const commentInput = e.target.querySelector('.comment-input');
-                    const commentText = commentInput.value;
-
-                    const { error: commentError } = await supabaseClient
-                        .from('comments')
-                        .insert({ post_id: postId, comment_text: commentText });
-
-                    if (commentError) {
-                        alert('发布评论失败：' + commentError.message);
-                        console.error("Error posting comment:", commentError);
-                        return;
-                    }
-
-                    commentInput.value = '';
-                    loadPosts(postSearchInput.value, categoryFilterSelect.value);
-                });
-            });
+            bindPostInteractionEvents(); // 每次加载帖子后绑定所有交互事件
         }
 
-        // 3. 发布文章 (新增了作者网名字段)
+        // 3. 发布文章
         postForm.addEventListener('submit', async e => {
             e.preventDefault();
-            const authorNickname = authorNicknameInput.value.trim(); // 获取作者网名并去除首尾空格
+            const authorNickname = authorNicknameInput.value.trim();
             const title = document.getElementById('postTitle').value;
             const content = document.getElementById('postContent').value;
             const category = postCategorySelect.value;
@@ -214,7 +259,8 @@
                 title,
                 content,
                 category,
-                author_nickname: authorNickname || '匿名用户' // 如果网名为空，则默认为“匿名用户”
+                author_nickname: authorNickname || '匿名用户',
+                likes_count: 0 // 新发布的帖子点赞数默认为0
             });
             if (error) {
                 alert('发布文章失败：' + error.message);
@@ -223,8 +269,8 @@
             }
             postForm.reset();
             postCategorySelect.value = '';
-            authorNicknameInput.value = ''; // 清空网名输入框
-            loadPosts(postSearchInput.value, categoryFilterSelect.value);
+            authorNicknameInput.value = '';
+            // 实时订阅会处理页面更新
         });
 
         // 4. 搜索功能：监听搜索框输入
@@ -236,6 +282,32 @@
         categoryFilterSelect.addEventListener('change', () => {
             loadPosts(postSearchInput.value, categoryFilterSelect.value);
         });
+
+
+        // 6. 实时更新：订阅 posts 表的 INSERT 事件
+        const postsChannel = supabaseClient.channel('posts_changes');
+        postsChannel
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'posts' },
+                async (payload) => {
+                    console.log('New post received in real-time!', payload.new);
+                    const newPostData = payload.new;
+
+                    const currentSearchTerm = postSearchInput.value.toLowerCase();
+                    const currentCategory = categoryFilterSelect.value;
+
+                    const matchesSearch = !currentSearchTerm || newPostData.title.toLowerCase().includes(currentSearchTerm);
+                    const matchesCategory = !currentCategory || newPostData.category === currentCategory;
+
+                    if (matchesSearch && matchesCategory) {
+                        const newPostDiv = await renderPost(newPostData);
+                        postsContainer.prepend(newPostDiv);
+                        bindPostInteractionEvents(); // 为新添加的帖子的交互（点赞和评论）绑定事件
+                    }
+                }
+            )
+            .subscribe();
 
         // 页面加载完成后立即执行（首次加载）
         loadPosts();
