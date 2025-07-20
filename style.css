@@ -4,8 +4,46 @@ body {
     font-family: Arial, sans-serif;
     text-align: center;
     padding-top: 50px;
+    margin: 0; /* 确保 body 没有默认外边距 */
 }
 
+h1 {
+    color: #007bff;
+    margin-bottom: 10px;
+}
+
+p {
+    color: #555;
+    line-height: 1.6;
+}
+
+/* 公约区样式 */
+.convention-section {
+    background-color: #e9f7ff; /* 公约区浅蓝色背景 */
+    margin: 20px auto;
+    padding: 15px 20px;
+    border-radius: 8px;
+    border: 1px solid #cceeff; /* 浅蓝色边框 */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    max-width: 800px;
+    text-align: left;
+    color: #0056b3; /* 深蓝色文字 */
+}
+
+.convention-section h2 {
+    text-align: center;
+    color: #007bff; /* 与主主题蓝色匹配 */
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.convention-section p {
+    font-size: 0.95em;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* 主要内容区样式 */
 .post-section, .posts-display {
     background-color: #fff;
     margin: 20px auto;
@@ -22,6 +60,7 @@ body {
     margin-bottom: 20px;
 }
 
+/* 发布文章表单样式 */
 #postForm {
     display: flex;
     flex-direction: column;
@@ -33,6 +72,8 @@ body {
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 16px;
+    width: auto; /* 在 flex 容器内自动宽度 */
+    box-sizing: border-box; /* 确保 padding 和 border 包含在元素总宽度内 */
 }
 
 #postContent {
@@ -49,130 +90,117 @@ body {
     cursor: pointer;
     font-size: 16px;
     transition: background-color 0.3s ease;
+    align-self: flex-end; /* 按钮靠右对齐 */
 }
 
 #postForm button:hover {
     background-color: #0056b3;
 }
 
-.post-item {
+/* 单个帖子样式 */
+/* !! 重要：将 .post-item 改为 .post 以匹配你的 JS !! */
+.post {
     border: 1px solid #eee;
     padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 6px;
-    background-color: #f9f9f9;
+    margin-bottom: 20px; /* 增加帖子之间的间距 */
+    border-radius: 8px; /* 稍微圆角 */
+    background-color: #fefefe; /* 单个帖子背景色 */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); /* 细微阴影 */
 }
 
-.post-item h3 {
-    color: #007bff;
-    margin-top: 0;
-    margin-bottom: 5px; /* 减小标题和内容之间的间距 */
-}
-
-.post-item p {
-    line-height: 1.6;
-    color: #555;
-    margin-top: 5px; /* 确保内容在标题下方 */
+/* 移除最后一个帖子的下边距，避免多余空间 */
+.posts-display .post:last-child {
     margin-bottom: 0;
 }
 
-.post-item small {
+.post h3 { /* 将 .post-item h3 改为 .post h3 */
+    color: #007bff;
+    margin-top: 0;
+    margin-bottom: 8px; /* 标题下方稍微增加空间 */
+}
+
+.post p { /* 将 .post-item p 改为 .post p */
+    line-height: 1.6;
+    color: #555;
+    margin-bottom: 0;
+}
+
+.post small { /* 将 .post-item small 改为 .post small */
     display: block;
     text-align: right;
     color: #888;
     margin-top: 10px;
-    font-size: 0.9em;
+    font-size: 0.85em; /* 日期字体稍小 */
 }
 
-.post-item .toggle-content {
-    background-color: #6c757d;
-    color: white;
-    padding: 5px 10px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8em;
-    margin-top: 10px;
-    float: right;
-}
-
-.post-item .toggle-content:hover {
-    background-color: #5a6268;
-}
-
-.post-item .post-content {
-    margin-top: 10px;
-    margin-bottom: 10px;
-    padding: 10px;
-    border: 1px solid #eee;
-    border-radius: 4px;
-    background-color: #fefefe;
-}
-
+/* 评论区样式 */
 .comments-section {
-    margin-top: 20px;
+    margin-top: 25px; /* 增加上方外边距，更好分隔 */
     padding-top: 15px;
-    border-top: 1px solid #eee;
+    border-top: 1px dashed #ddd; /* 顶部虚线分隔 */
 }
 
 .comments-section h4 {
     margin-top: 0;
     margin-bottom: 15px;
     color: #333;
+    text-align: left; /* 在其容器内靠左对齐 */
+    padding-bottom: 5px; /* 标题下方空间 */
 }
 
 .comments-list {
-    margin-bottom: 20px;
+    margin-bottom: 15px; /* 评论列表与表单之间的间距 */
+    padding-left: 10px; /* 评论稍作缩进 */
+    padding-right: 10px;
 }
 
 .comment-item {
-    background-color: #f0f0f0;
-    padding: 10px;
+    background-color: #f9f9f9; /* 评论背景色 */
+    padding: 12px; /* 稍多内边距 */
     border-radius: 4px;
-    margin-bottom: 10px;
+    margin-bottom: 10px; /* 单条评论之间的间距 */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* 评论的细微阴影 */
 }
 
 .comment-item p {
-    margin: 0;
-    font-size: 0.95em;
+    margin: 0 0 5px 0; /* 评论文本外边距 */
+    font-size: 0.9em; /* 评论字体稍小 */
     color: #444;
 }
 
 .comment-item small {
-    font-size: 0.8em;
+    font-size: 0.75em; /* 评论日期字体更小 */
     color: #777;
-    text-align: left;
-    margin-top: 5px;
+    text-align: right; /* 评论时间戳靠右对齐 */
+    display: block; /* 确保 small 标签占据整行 */
 }
 
 .comment-form {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    margin-top: 10px; /* 评论表单上方间距 */
 }
 
-.comment-form input[type="text"],
-.comment-form textarea {
-    padding: 8px;
-    border: 1px solid #ddd;
+.comment-form input[type="text"] { /* 你的 HTML 中使用了 input[type="text"]，而不是 textarea */
+    padding: 10px; /* 输入框稍多内边距 */
+    border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 14px;
-}
-
-.comment-form textarea {
-    min-height: 60px;
-    resize: vertical;
+    width: auto; /* 自动宽度 */
+    box-sizing: border-box; /* 重要：保持尺寸一致 */
 }
 
 .comment-form button {
-    background-color: #28a745;
+    background-color: #28a745; /* 绿色按钮 */
     color: white;
-    padding: 8px 12px;
+    padding: 8px 15px; /* 统一内边距 */
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
     transition: background-color 0.3s ease;
+    align-self: flex-end; /* 按钮靠右对齐 */
 }
 
 .comment-form button:hover {
