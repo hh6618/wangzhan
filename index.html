@@ -12,13 +12,26 @@
       <input type="text" id="postSearchInput" placeholder="搜索帖子名称...">
   </div>
 
+  <div class="category-filter-container">
+      <label for="categoryFilter">按分类筛选:</label>
+      <select id="categoryFilter">
+          <option value="">所有分类</option>
+          <option value="公告">公告</option>
+          <option value="讨论">讨论</option>
+          <option value="分享">分享</option>
+          <option value="问答">问答</option>
+          <option value="其他">其他</option>
+      </select>
+  </div>
+
+
   <h1>欢迎来到我的网站！</h1>
   <p>这是一个简单的HTML页面。</p>
 
   <div class="convention-section">
       <h2>网站公约</h2>
       <p>为了更好地知道是谁写的帖子或评论，请在最后一段话里加上你的网名（可以简写）。
-        提示：如果觉得网页布局过于拥挤可双指朝内滑动强制缩放网页
+        提示：手机用户如果觉得网页布局过于拥挤可双指朝内滑动强制缩放网
       </p>
   </div>
 
@@ -27,6 +40,15 @@
       <form id="postForm">
           <input type="text" id="postTitle" placeholder="文章标题" required>
           <textarea id="postContent" placeholder="文章内容" required></textarea>
+          <label for="postCategory">选择分类:</label>
+          <select id="postCategory" required>
+              <option value="">请选择一个分类</option>
+              <option value="公告">公告</option>
+              <option value="讨论">讨论</option>
+              <option value="分享">分享</option>
+              <option value="问答">问答</option>
+              <option value="其他">其他</option>
+          </select>
           <button type="submit">发布</button>
       </form>
   </div>
@@ -53,7 +75,10 @@
 
         const postForm = document.getElementById('postForm');
         const postsContainer = document.getElementById('postsContainer');
-        const postSearchInput = document.getElementById('postSearchInput'); // 获取搜索框元素
+        const postSearchInput = document.getElementById('postSearchInput');
+        const postCategorySelect = document.getElementById('postCategory'); // 获取发布文章时的分类选择框
+        const categoryFilterSelect = document.getElementById('categoryFilter'); // 获取分类筛选选择框
+
 
         // 辅助函数：加载评论
         async function loadComments(postId) {
@@ -71,9 +96,9 @@
         }
 
         // 2. 页面加载时读取文章和评论
-        // 现在 loadPosts 函数可以接受一个可选的 searchTerm 参数
-        async function loadPosts(searchTerm = '') {
-            console.log("Attempting to load posts from:", SUPABASE_URL, "with search term:", searchTerm);
+        // 现在 loadPosts 函数可以接受一个可选的 searchTerm 和 selectedCategory 参数
+        async function loadPosts(searchTerm = '', selectedCategory = '') {
+            console.log("Attempting to load posts with search term:", searchTerm, "and category:", selectedCategory);
             let query = supabaseClient
                 .from('posts')
                 .select('*')
@@ -81,7 +106,12 @@
 
             // 如果有搜索词，则添加过滤条件
             if (searchTerm) {
-                query = query.ilike('title', `%${searchTerm}%`); // 使用 ilike 进行不区分大小写的模糊匹配
+                query = query.ilike('title', `%${searchTerm}%`);
+            }
+
+            // 如果有选择分类（且不是“所有分类”），则添加分类过滤条件
+            if (selectedCategory) {
+                query = query.eq('category', selectedCategory);
             }
 
             const { data: posts, error: postsError } = await query;
@@ -93,8 +123,12 @@
             }
             postsContainer.innerHTML = '';
 
-            if (posts.length === 0 && searchTerm) {
-                postsContainer.innerHTML = `<p>未找到包含 "${searchTerm}" 的帖子。</p>`;
+            if (posts.length === 0 && (searchTerm || selectedCategory)) {
+                let message = '未找到';
+                if (searchTerm) message += `包含 "${searchTerm}" 的`;
+                if (selectedCategory) message += `分类为 "${selectedCategory}" 的`;
+                message += '帖子。';
+                postsContainer.innerHTML = `<p>${message}</p>`;
                 return;
             } else if (posts.length === 0) {
                  postsContainer.innerHTML = '<p>目前还没有任何帖子。</p>';
@@ -108,7 +142,7 @@
                 postDiv.innerHTML = `
                     <h3>${p.title}</h3>
                     <p>${p.content}</p>
-                    <small>发布于: ${new Date(p.created_at).toLocaleString()}</small>
+                    <small>分类: ${p.category || '未分类'} | 发布于: ${new Date(p.created_at).toLocaleString()}</small>
                     <div class="comments-section" id="comments-for-post-${p.id}">
                         <h4>评论:</h4>
                         <div class="comments-list"></div>
@@ -155,31 +189,43 @@
                     }
 
                     commentInput.value = '';
-                    loadPosts(postSearchInput.value); // 发布评论后，保持搜索状态刷新
+                    loadPosts(postSearchInput.value, categoryFilterSelect.value); // 发布评论后，保持搜索和分类状态刷新
                 });
             });
         }
 
-        // 3. 发布文章
+        // 3. 发布文章 (新增了分类字段)
         postForm.addEventListener('submit', async e => {
             e.preventDefault();
             const title = document.getElementById('postTitle').value;
             const content = document.getElementById('postContent').value;
+            const category = postCategorySelect.value; // 获取选择的分类
 
-            console.log("Attempting to post article to:", SUPABASE_URL);
-            const { error } = await supabaseClient.from('posts').insert({ title, content });
+            if (!category) {
+                alert('请选择一个分类！');
+                return;
+            }
+
+            console.log("Attempting to post article to:", SUPABASE_URL, "with category:", category);
+            const { error } = await supabaseClient.from('posts').insert({ title, content, category }); // 插入时包含 category 字段
             if (error) {
                 alert('发布文章失败：' + error.message);
                 console.error("Error posting article:", error);
                 return;
             }
             postForm.reset();
-            loadPosts(postSearchInput.value); // 发布文章后，保持搜索状态刷新
+            postCategorySelect.value = ''; // 重置分类选择
+            loadPosts(postSearchInput.value, categoryFilterSelect.value); // 发布文章后，保持搜索和分类状态刷新
         });
 
         // 4. 搜索功能：监听搜索框输入
         postSearchInput.addEventListener('input', () => {
-            loadPosts(postSearchInput.value); // 每次输入时都重新加载帖子
+            loadPosts(postSearchInput.value, categoryFilterSelect.value); // 每次输入时都重新加载帖子
+        });
+
+        // 5. 分类筛选功能：监听分类选择框变化
+        categoryFilterSelect.addEventListener('change', () => {
+            loadPosts(postSearchInput.value, categoryFilterSelect.value); // 分类变化时重新加载帖子
         });
 
         // 页面加载完成后立即执行（首次加载）
